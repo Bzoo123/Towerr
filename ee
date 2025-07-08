@@ -2,9 +2,9 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 -- Settings
-local MIN_DELAY = 1  -- Absolute minimum delay (never go faster than this)
+local MIN_DELAY = 2  -- Absolute minimum delay (never go faster than this)
 local MAX_DELAY = 3.0   -- Maximum safe delay
-local START_DELAY = 1 -- Initial delay
+local START_DELAY = 2 -- Initial delay
 local PING_THRESHOLD = 300 -- Ping limit before slowing down
 
 local currentDelay = START_DELAY
