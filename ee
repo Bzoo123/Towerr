@@ -1,0 +1,82 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- Settings
+local MIN_DELAY = 1  -- Absolute minimum delay (never go faster than this)
+local MAX_DELAY = 3.0   -- Maximum safe delay
+local START_DELAY = 1 -- Initial delay
+local PING_THRESHOLD = 300 -- Ping limit before slowing down
+
+local currentDelay = START_DELAY
+local TOTAL_COINS = 0
+
+-- UI Setup
+local gui = Instance.new("ScreenGui")
+gui.Name = "CoinCollectorPro"
+gui.Parent = player.PlayerGui
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 300, 0, 70)
+statusLabel.Position = UDim2.new(0.5, -150, 0.05, 0)
+statusLabel.Text = "🌀 Khởi động... (Delay: "..currentDelay.."s)"
+statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 14
+statusLabel.Parent = gui
+
+-- Adaptive Collection System
+local function safeCollect()
+    while task.wait(currentDelay) do
+        pcall(function()
+            -- Check character
+            local character = player.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then
+                statusLabel.Text = "⚠️ Chờ nhân vật hồi sinh..."
+                return
+            end
+            
+            -- Check coins
+            local coins = workspace:FindFirstChild("Coins")
+            if not coins then
+                statusLabel.Text = "🕒 Đợi coin xuất hiện..."
+                return
+            end
+            
+            -- Network check
+            local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+            if ping > PING_THRESHOLD then
+                currentDelay = math.min(currentDelay + 0.1, MAX_DELAY)
+                statusLabel.Text = "🐢 Đang làm chậm (Ping: "..ping.."ms)"
+                return
+            elseif ping < PING_THRESHOLD/2 and currentDelay > MIN_DELAY then
+                currentDelay = math.max(currentDelay - 0.05, MIN_DELAY) -- Gradually speed up
+            end
+            
+            -- Collect coins
+            local rootPart = character.HumanoidRootPart
+            local collectedThisCycle = 0
+            
+            for _, coin in ipairs(coins:GetChildren()) do
+                if coin:IsA("BasePart") and coin.Parent then
+                    firetouchinterest(rootPart, coin, 0)
+                    firetouchinterest(rootPart, coin, 1)
+                    
+                    TOTAL_COINS += 1
+                    collectedThisCycle += 1
+                    
+                    if collectedThisCycle >= 5 then -- Small batch processing
+                        statusLabel.Text = "✅ Đang thu: "..TOTAL_COINS.."\n⏱ Delay: "..string.format("%.2f", currentDelay).."s"
+                        task.wait(currentDelay/2) -- Small pause between batches
+                        collectedThisCycle = 0
+                    end
+                end
+            end
+            
+            statusLabel.Text = "✨ Hoàn thành!\nTổng coin: "..TOTAL_COINS.."\n⏱ Delay hiện tại: "..string.format("%.2f", currentDelay).."s"
+        end)
+    end
+end
+
+-- Start system
+safeCollect()
